@@ -1,56 +1,23 @@
+name: Build and Push Docker image to Docker Hub
 
-services:
-  db:
-    container_name: lamp-db
-    image: mysql:latest
-    environment:
-      MYSQL_DATABASE: lamp_demo
-      MYSQL_USER: lamp_demo
-      MYSQL_PASSWORD: password
-      MYSQL_ROOT_PASSWORD: rootpassword
-    volumes:
-      - "./db:/docker-entrypoint-initdb.d"
-    networks:
-      - lamp-docker
-    ports:
-      - "3308:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s     
-      retries: 5
-
-  www:
-    container_name: lamp-www
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: php:8.1.1-apache
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - "./:/var/www/html"
-    ports:
-      - "85:80"
-      - "443:443"
-    networks:
-      - lamp-docker
-
-  phpmyadmin:
-    container_name: lamp-phpmyadmin
-    depends_on:
-      db:
-        condition: service_healthy
-    image: phpmyadmin/phpmyadmin:latest
-    ports:
-      - "8001:80"
-    environment:
-      PMA_HOST: db
-      PMA_PORT: 3306
-    networks:  
-      - lamp-docker
-
-networks:
-  lamp-docker:
-    driver: bridge
+on: push
+jobs:
+  push_to_registry:
+    name: Push Docker image to Docker Hub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+    
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v4
+        with:
+          context: foosball/
+          push: true
+          tags: shivathebravo/foosball:${{github.run_number}}
